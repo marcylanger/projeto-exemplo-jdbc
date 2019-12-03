@@ -4,14 +4,62 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
 import application.config.JDBCConnection;
 import application.model.Cliente;
+import application.model.TipoCliente;
 
 public class ClienteDAO {
 
+	/**
+	 * Método para recuperar tipo de cliente (ENUM) para salvar
+	 * @param cliente
+	 * @return
+	 */
+	private Integer getTipoCliente(Cliente cliente) {
+		Integer tipoCliente;
+		switch (cliente.getTipoCliente()) {
+		case BASICO:
+			tipoCliente = TipoCliente.CLIENTE_BASICO;
+			break;
+
+		case SUPER:
+			tipoCliente = TipoCliente.CLIENTE_SUPER;
+			break;
+		default:
+			tipoCliente = 0;
+			break;
+		}
+		
+		return tipoCliente;
+	}
+	
+	/**
+	 * Método para setar tipo de cliente (ENUM) vindo do banco de dados
+	 * @param cliente
+	 * @return
+	 */
+	private TipoCliente setTipoCliente(Integer tipoCliente) {
+		TipoCliente tipoClienteEnum;
+		switch (tipoCliente) {
+		case 0:
+			tipoClienteEnum = TipoCliente.BASICO;
+			break;
+
+		case 1:
+			tipoClienteEnum = TipoCliente.SUPER;
+			break;
+		default:
+			tipoClienteEnum = TipoCliente.BASICO;
+			break;
+		}
+		
+		return tipoClienteEnum;
+	}
+	
 	/**
 	 * Método que cadastra um novo cliente na base de dados
 	 * 
@@ -27,20 +75,21 @@ public class ClienteDAO {
 				String cpf = "'" + cliente.getCpf() + "'";
 				// Tratamento pois é um campo nullable
 				String data = (cliente.getDataNascimento() != null ? ("'" + cliente.getDataNascimento() + "'") : null);
-				stmt.execute("insert into cliente   " + "(nome, cpf, data_nascimento) " + "values (" + nome + ", "
-						+ cpf + ", " + data + ") returning codigo");
+
 				
+				stmt.execute("insert into cliente   " + "(nome, cpf, data_nascimento, tipo_cliente) " + "values ("
+						+ nome + ", " + cpf + ", " + data + ", " + this.getTipoCliente(cliente) + ") returning codigo");
+
 				/*
-				 * Por vezes é necessário recuperar o código que a inserção gerou
-				 * Nesses casos acrescentamos "returning codigo" ao final da query, como acima
-				 * E recuperamos criando um ResultSet (como quando é uma consulta)
-				 * Isso é muito usado em casos de venda e item venda,
-				 * onde é inserida uma venda e os itens venda precisam do codigo da venda inserida
-				 * para setar na foreing key
+				 * Por vezes é necessário recuperar o código que a inserção gerou Nesses casos
+				 * acrescentamos "returning codigo" ao final da query, como acima E recuperamos
+				 * criando um ResultSet (como quando é uma consulta) Isso é muito usado em casos
+				 * de venda e item venda, onde é inserida uma venda e os itens venda precisam do
+				 * codigo da venda inserida para setar na foreing key
 				 */
 				ResultSet last_insert_cliente = stmt.getResultSet();
-				if(last_insert_cliente.next()) {
-				   cliente.setCodigo(last_insert_cliente.getInt(1));
+				if (last_insert_cliente.next()) {
+					cliente.setCodigo(last_insert_cliente.getInt(1));
 				}
 			} catch (SQLException e) {
 				System.out.println("Erro ao inserir tupla " + e);
@@ -72,7 +121,7 @@ public class ClienteDAO {
 				// Tratamento pois é um campo nullable
 				String data = (cliente.getDataNascimento() != null ? ("'" + cliente.getDataNascimento() + "'") : null);
 				stmt.executeUpdate("update cliente set " + "nome = " + nome + ", cpf = " + cpf + ", data_nascimento = "
-						+ data + " where codigo = " + cliente.getCodigo());
+						+ data + ", tipo_cliente = " + this.getTipoCliente(cliente) + " where codigo = " + cliente.getCodigo());
 			} catch (SQLException e) {
 				System.out.println("Erro ao alterar tupla " + e);
 			}
@@ -124,15 +173,16 @@ public class ClienteDAO {
 			JDBCConnection.JDBCConnect();
 			Statement stmt = JDBCConnection.conn.createStatement();
 
-			String sql = "select c.codigo, c.nome, c.cpf, c.data_nascimento " + "from cliente c";
+			String sql = "select c.codigo, c.nome, c.cpf, c.data_nascimento, c.tipo_cliente " + "from cliente c";
 			ResultSet rset = stmt.executeQuery(sql);
 
 			while (rset.next()) {
 				LocalDate dataNascimento = null;
 				if (rset.getDate(4) != null) {
+					// LocalDateTime dataHorarioChegada = rset.getTimestamp(4).toLocalDateTime();
 					dataNascimento = rset.getDate(4).toLocalDate();
 				}
-				Cliente cliente = new Cliente(rset.getInt(1), rset.getString(2), rset.getString(3), dataNascimento);
+				Cliente cliente = new Cliente(rset.getInt(1), rset.getString(2), rset.getString(3), dataNascimento, this.setTipoCliente(rset.getInt(5)));
 				listaClientes.add(cliente);
 			}
 
@@ -147,7 +197,9 @@ public class ClienteDAO {
 	}
 
 	/**
-	 * Método que busca o registro de um cliente do banco de dados através do seu código
+	 * Método que busca o registro de um cliente do banco de dados através do seu
+	 * código
+	 * 
 	 * @param clienteId
 	 * @return
 	 */
@@ -158,7 +210,7 @@ public class ClienteDAO {
 			JDBCConnection.JDBCConnect();
 			Statement stmt = JDBCConnection.conn.createStatement();
 
-			String sql = "select c.codigo, c.nome, c.cpf, c.data_nascimento " + "from cliente c where c.codigo = "
+			String sql = "select c.codigo, c.nome, c.cpf, c.data_nascimento, c.tipo_cliente " + "from cliente c where c.codigo = "
 					+ clienteId;
 			ResultSet rset = stmt.executeQuery(sql);
 
@@ -167,7 +219,7 @@ public class ClienteDAO {
 				if (rset.getDate(4) != null) {
 					dataNascimento = rset.getDate(4).toLocalDate();
 				}
-				cliente = new Cliente(rset.getInt(1), rset.getString(2), rset.getString(3), dataNascimento);
+				cliente = new Cliente(rset.getInt(1), rset.getString(2), rset.getString(3), dataNascimento, this.setTipoCliente(rset.getInt(5)));
 			}
 
 			stmt.close();
@@ -179,5 +231,7 @@ public class ClienteDAO {
 
 		return cliente;
 	}
+	
+	
 
 }

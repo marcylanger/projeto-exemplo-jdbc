@@ -12,6 +12,8 @@ public class Cliente {
 	private String cpf;
 	
 	private LocalDate dataNascimento;
+	
+	private TipoCliente tipoCliente;
 
 	public Integer getCodigo() {
 		return codigo;
@@ -45,10 +47,12 @@ public class Cliente {
 		this.dataNascimento = dataNascimento;
 	}
 
-	@Override
-	public String toString() {
-		return "Cliente [codigo=" + codigo + ", nome=" + nome + ", cpf=" + cpf + ", dataNascimento=" + dataNascimento
-				+ "]";
+	public TipoCliente getTipoCliente() {
+		return tipoCliente;
+	}
+
+	public void setTipoCliente(TipoCliente tipoCliente) {
+		this.tipoCliente = tipoCliente;
 	}
 
 	@Override
@@ -59,6 +63,7 @@ public class Cliente {
 		result = prime * result + ((cpf == null) ? 0 : cpf.hashCode());
 		result = prime * result + ((dataNascimento == null) ? 0 : dataNascimento.hashCode());
 		result = prime * result + ((nome == null) ? 0 : nome.hashCode());
+		result = prime * result + ((tipoCliente == null) ? 0 : tipoCliente.hashCode());
 		return result;
 	}
 
@@ -91,20 +96,29 @@ public class Cliente {
 				return false;
 		} else if (!nome.equals(other.nome))
 			return false;
+		if (tipoCliente != other.tipoCliente)
+			return false;
 		return true;
 	}
 
-	public Cliente(Integer codigo, String nome, String cpf, LocalDate dataNascimento) {
+	@Override
+	public String toString() {
+		return "Cliente [codigo=" + codigo + ", nome=" + nome + ", cpf=" + cpf + ", dataNascimento=" + dataNascimento
+				+ ", tipoCliente=" + tipoCliente + "]";
+	}
+
+	public Cliente(Integer codigo, String nome, String cpf, LocalDate dataNascimento, TipoCliente tipoCliente) {
 		super();
 		this.codigo = codigo;
 		this.nome = nome;
 		this.cpf = cpf;
 		this.dataNascimento = dataNascimento;
+		this.tipoCliente = tipoCliente;
 	}
-	
-	
+
 	public Cliente() {
 		
 	}
+
 	
 }
